@@ -1,3 +1,4 @@
+#!/usr/bin/env python2
 import requests
 import urllib2
 import re
@@ -6,7 +7,7 @@ import subprocess
 import argparse
 from multiprocessing import Process, Queue
 
-import ioutils
+# import ioutils
 
 VERSION = '20120701'
 TYPE = '5gram'
@@ -27,7 +28,7 @@ def split_main(proc_num, queue, download_dir):
 
         print proc_num, "Name", name
         loc_dir = download_dir + "/" + name + "/"
-        ioutils.mkdir(loc_dir)
+        os.mkdir(loc_dir)
 
         print proc_num, "Downloading", name
         success = False
@@ -50,15 +51,17 @@ def split_main(proc_num, queue, download_dir):
 def run_parallel(num_processes, out_dir, source):
     page = requests.get("http://storage.googleapis.com/books/ngrams/books/datasetsv2.html")
     pattern = re.compile('href=\'(.*%s-%s-%s-.*\.gz)' % (source, TYPE, VERSION))
-    urls = pattern.findall(page.text)
+    urls = pattern.findall(page.text)  # [:3]
     del page
     queue = Queue()
+    print('#urls:', len(urls))
     for url in urls:
         queue.put(url)
-    ioutils.mkdir(out_dir + '/' + source + '/raw')
     download_dir = out_dir + '/' + source + '/raw/'
-    ioutils.mkdir(download_dir)
-    procs = [Process(target=split_main, args=[i, queue, download_dir]) for i in range(num_processes)]
+    if not os.path.exists(download_dir):
+        os.mkdir(download_dir)
+    procs = [Process(target=split_main, args=[i, queue, download_dir]) \
+        for i in range(num_processes)]
     for p in procs:
         p.start()
     for p in procs:
